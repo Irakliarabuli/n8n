@@ -1,0 +1,48 @@
+name: Trigger auto deployment for n8ncontainerapp
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - '**'
+    - '.github/workflows/n8ncontainerapp-AutoDeployTrigger-57a0ae03-218d-4041-a4f1-869ce95c0deb.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.N8NCONTAINERAPP_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.N8NCONTAINERAPP_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.N8NCONTAINERAPP_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}
+          _dockerfilePathKey_: _dockerfilePath_
+          registryUrl: 
+          registryUsername: ${{ secrets.N8NCONTAINERAPP_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.N8NCONTAINERAPP_REGISTRY_PASSWORD }}
+          containerAppName: n8ncontainerapp
+          resourceGroup: ResourceGR1
+          imageToBuild: default/[parameters('containerAppName')]:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
